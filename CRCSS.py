@@ -1,5 +1,7 @@
 import time
 import struct
+import traceback
+
 import serial
 
 def calculate_crc(data):
@@ -9,7 +11,7 @@ def calculate_crc(data):
 
 try:
     # 初始化串口
-    ser = serial.Serial('COM14', 38400, timeout=0.1)
+    ser = serial.Serial('COM12', 115200, timeout=0.1)
 
     # 要發送的指令，例如：FA 01 F6 01
     # command = bytearray([0xFA, 0x01, 0xF6, 0x01])
@@ -33,9 +35,9 @@ try:
     # command = [0xFA,0x01,0xF3,0x00]
     #始能
     command = [0xFA,0x01,0xF3,0x01]
-    speed = 0x02#100
+    speed = 0x32#100
     #馬達反轉含轉速及pluse，脈衝值為正
-    command = [0xFA,0x01,0xFD,0x00,speed,0x10,0x00,0x00,0x06,0x40] #送衝1600脈衝
+    command = [0xFA,0x01,0xFD,0x00,speed,0x10,0x00,0x00,0x19,0x00] #送衝1600脈衝
     # #馬達正轉含轉速及pluse，脈衝值為負
     # command = [0xFA,0x01,0xFD,0x00,speed,0x10,0x00,0x00,0x06,0x40]
     # command = bytearray([0xFA, 0x01, 0x30])
@@ -64,6 +66,7 @@ try:
     print(f"Sent command: {struct.unpack('>i',data[3:7])[0]}")
 except:
     pass
+    print(traceback.print_exc())
 
 # FF FF F9 C0
 # def calculate_crc(data):
