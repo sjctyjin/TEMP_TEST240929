@@ -4,7 +4,7 @@ import struct
 
 # 配置串行通訊參數
 ser = serial.Serial(
-    port='COM12',  # 這裡的端口號根據您的設備而定
+    port='COM14',  # 這裡的端口號根據您的設備而定
     baudrate=115200,        # 設置波特率
     parity='E',
     stopbits=serial.STOPBITS_ONE,
@@ -59,7 +59,7 @@ time.sleep(1)
 
 """ 扭轉-正轉 """
 speed = 0x32#100
-command = [0xFA,0x01,0xFD,0x00,speed,0x10,0x00,0x00,0x19,0x00] #送衝6400脈衝
+command = [0xFA,0x01,0xFD,0x00,speed,0x10,0x00,0x00,0x12,0xC0] #送衝6400脈衝
 
 # 計算CRC並附加到指令後面
 crc = calculate_crc_57servo(command)
@@ -71,7 +71,7 @@ time.sleep(2)
 #清空接收緩衝區
 ser.readall()
 """  扭轉-反轉    """
-command = [0xFA,0x01,0xFD,0x80,speed,0x10,0x00,0x00,0x19,0x00] #送衝6400脈衝
+command = [0xFA,0x01,0xFD,0x80,speed,0x10,0x00,0x00,0x12,0xD4] #送衝6400脈衝
 
 # 計算CRC並附加到指令後面
 crc = calculate_crc_57servo(command)
@@ -83,13 +83,13 @@ time.sleep(1)
 #清空接收緩衝區
 ser.readall()
 
-"""Num0"""
+"""Num0""" #開爪
 ser.write(bytes([0x01, 0x06, 0x00, 0x10, 0x00, 0x90, 0x88, 0x63]))  # Start Num0
 # 接收數據 Num0
 received_data = ser.readline()
 print("Number : ",received_data)
 
-"""Num2"""
+"""Num2""" #開半爪-第一組數據
 # ser.write( bytes([0x01, 0x06, 0x00, 0x10, 0x00, 0x92, 0x09, 0xA2]))  # Start Num1
 # # time.sleep(1)
 # # 接收數據 Num1

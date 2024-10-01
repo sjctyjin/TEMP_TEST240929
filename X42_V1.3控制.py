@@ -5,6 +5,29 @@ import math
 # 设置串口参数
 set_pos = -1      #旋轉姿態 4 種
 height_limit = 1 #高度限制開關
+
+Arduino = None
+Emm42 = None
+MKS_Aspina = None
+
+"""
+Arduino
+"""
+port = 'COM7'  # 根据您的情况更改端口号，例如在Windows上可能是 'COM3'
+baudrate = 115200  # 波特率需要与Arduino上的设置一致
+Arduino = serial.Serial(port, baudrate, timeout=0.2)
+"""
+Emm42
+"""
+port = 'COM13'  # 根据您的情况更改端口号，例如在Windows上可能是 'COM3'
+Emm42 = serial.Serial(port, baudrate, timeout=0.2)
+"""
+MKS 57Servo : Aspina
+"""
+port = 'COM14'  # 根据您的情况更改端口号，例如在Windows上可能是 'COM3'
+MKS_Aspina = serial.Serial(port, baudrate, timeout=0.2)
+
+
 #歸零指令
 def zero_angle(ser):
     ser.write(b'\x01\x32\x6B')#讀取脈衝
@@ -22,20 +45,18 @@ def zero_angle(ser):
 
     if degree < 0:
     # 发送指令
-    #     ser.write(b'\x01\xfd\x14\xff\x00\x00\x00\x00\x6B')
-    #     ser.write(b'\x01\xfd\x00\x00\x64\x00\x00\x00\x19\x00\x00\x00\x6B')
-    # ser.write(b'\x01\xfd\x00\x00\x64\x00\x00\x00\x19\x00\x00\x00\x6B')
-        send_pos = [0x01, 0xfd, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
+        send_pos = [0x01, 0xfd, 0x00, 0x00, 0x64, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
         # send_pos = [0x01, 0xfd, 0x10, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x6B]
         send_pos[6:10] = struct.pack('>I', abs(current_angel))
         print("小於0 : ",send_pos)
         print("小於0 : ",bytes(send_pos))
         ser.write(bytes(send_pos))
     else:
-        send_pos = [0x01, 0xfd, 0x01, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
+        send_pos = [0x01, 0xfd, 0x01, 0x00, 0x64, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
         send_pos[6:10] = struct.pack('>I', abs(current_angel))
         print("大於0 : ",send_pos)
         ser.write(bytes(send_pos))
+    ser.readall()
     time.sleep(2)  # 等待Arduino响应
 #設定旋轉四位置
 def set_degress(ser,mode):
@@ -88,7 +109,8 @@ def set_degress(ser,mode):
             print("高度限制，無法設定")
             return
     #模式選擇
-    speed = 0x32#速度設定
+    speed = 0x78#速度設定
+    acceleration = 0x50#速度設定
     Foward = 0x10   # 正反轉(順時針)
     Backward = 0x00 # 正反轉(逆時針)
     cudeg = degree
@@ -100,7 +122,7 @@ def set_degress(ser,mode):
         # -90度以下 情況
         if cudeg < 0:
             print("角度脈衝值 : ",current_angel)
-            send_pos = [0x01, 0xfd, Backward,0x00, speed,0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x6B]
+            send_pos = [0x01, 0xfd, Backward,0x00, speed,acceleration, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x6B]
             send_pos[6:10] = struct.pack('>I', abs(current_angel  + int(degree_list[mode]*44.4)))
             print("移動到右邊-小於0 : ", send_pos)
             print("小於0 : ", bytes(send_pos))
@@ -109,7 +131,7 @@ def set_degress(ser,mode):
         # 90度以上 情況
         elif cudeg > 90:
             print("角度脈衝值 : ", current_angel)
-            send_pos = [0x01, 0xfd, Foward,0x00, speed,0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x6B]
+            send_pos = [0x01, 0xfd, Foward,0x00, speed,acceleration, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x6B]
             print("移動到右邊-大於90 : ",current_angel + (degree_list[mode]*44.4))
             send_pos[6:10] = struct.pack('>I', abs(current_angel + int(degree_list[mode]*44.4)))
             ser.write(bytes(send_pos))
@@ -117,28 +139,26 @@ def set_degress(ser,mode):
         # 0~90度 情況
         else:
             print("角度脈衝值 : ",current_angel)
-            send_pos = [0x01, 0xfd, Foward,0x00, speed,0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x6B]
+            send_pos = [0x01, 0xfd, Foward,0x00, speed,acceleration, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x6B]
             print("移動到右邊-0~90 : ", (degree_list[mode] ))
             send_pos[6:10] = struct.pack('>I', abs(current_angel+int(degree_list[mode]*44.4)))
             print("移動到右邊-0~90 : ", send_pos)
             ser.write(bytes(send_pos))
     elif mode == 2:
         if cudeg < 0:
-            send_pos = [0x01, 0xfd, Foward, 0x00, speed, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
+            send_pos = [0x01, 0xfd, Foward, 0x00, speed, acceleration, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
             send_pos[6:10] = struct.pack('>I', abs(current_angel + int(degree_list[mode] * 44.4)))
             print("移動到後面-小於0 : ", current_angel + (degree_list[mode] * 44.4))
-
             ser.write(bytes(send_pos))
         # 90度以上 情況
         elif cudeg > 90:
             print("角度脈衝值 : ", current_angel)
-            send_pos = [0x01, 0xfd, Backward, speed, 0x00, 0x00, 0x00, 0x00, 0x6B]
+            send_pos = [0x01, 0xfd, Backward, speed, acceleration, 0x00, 0x00, 0x00, 0x6B]
             send_pos[6:8] = struct.pack('>h', abs(current_angel + int(degree_list[mode] * 44.4)))
             print("移動到後面-等於180 : ", send_pos)
-            # ser.write(bytes(send_pos))
         # 0~90度 情況
         else:
-            send_pos = [0x01, 0xfd, Foward, 0x00, speed, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
+            send_pos = [0x01, 0xfd, Foward, 0x00, speed, acceleration, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
             send_pos[6:10] = struct.pack('>I', abs(current_angel + int(degree_list[mode] * 44.4)))
             print("移動到後面-0~90 : ", current_angel + (degree_list[mode] * 44.4))
             ser.write(bytes(send_pos))
@@ -147,27 +167,20 @@ def set_degress(ser,mode):
         print("當前脈角度 : ",cudeg)
         if cudeg < 0:
             print("脈衝設定值 : ",abs(current_angel + int(degree_list[mode] * 44.4)))
-            # send_pos = [0x01, 0xfd, Backward, speed, 0x00, 0x00, 0x00, 0x00, 0x6B]
-            # send_pos[6:8] = struct.pack('>h', abs(current_angel + int(degree_list[mode] * 44.4)))
-            send_pos = [0x01, 0xfd, Backward, 0x00, speed, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
+            send_pos = [0x01, 0xfd, Backward, 0x00, speed, acceleration, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
             send_pos[6:10] = struct.pack('>I', abs(current_angel + int(degree_list[mode] * 44.4)))
             print("移動到左邊-小於0 : ", send_pos)
             ser.write(bytes(send_pos))
         else:
-            # send_pos = [0x01, 0xfd, Foward, speed, 0x00, 0x00, 0x00, 0x00, 0x6B]
-            # send_pos[6:8] = struct.pack('>h', abs(current_angel + int(degree_list[mode] * 44.4)))
-            # print("移動到左邊-0~180 : ", send_pos)
-            send_pos = [0x01, 0xfd, Backward, 0x00, speed, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
+            send_pos = [0x01, 0xfd, Backward, 0x00, speed, acceleration, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6B]
             send_pos[6:10] = struct.pack('>I', abs(current_angel + int(degree_list[mode] * 44.4)))
             print("移動到左邊-0~180 : ", send_pos)
             ser.write(bytes(send_pos))
     elif mode == 4:#不使能
-        # ser.write(b'\x01\xf3\x00\x6B')  # 不始能狀態 #始能狀態 b'\x01\xf3\x01\x6B'
         ser.write(b'\x01\xf3\xab\00\00\x6B')
         ser.readall()
         print("不使能")
     elif mode == 5:#使能
-        # ser.write(b'\x01\xf3\x01\x6B')  # 始能狀態 #不始能狀態 b'\x01\xf3\x00\x6B'
         ser.write(b'\x01\xf3\xab\01\00\x6B')
         ser.readall()
         print("使能")
@@ -175,79 +188,43 @@ def set_degress(ser,mode):
         ser.write(b'\x01\x0A\x6D\x6B')
         ser.readall()
         print("角度清零")
+    ser.readall()
 
-def rotate(x,y,z,pos=0):
+def rotate(ser,x,y,z,pos=0):
     global set_pos
-    port = 'COM16'  # 根据您的情况更改端口号，例如在Windows上可能是 'COM3'
-    baudrate = 38400  # 波特率需要与Arduino上的设置一致
-    ser = serial.Serial(port, baudrate, timeout=0.2)
-
-    #配置1:5減速馬達的話
-    #設置16000脈衝為一圈 = 3200 * 5
-    #即1度為 16000 / 360 = 44.4
-
-    # for i in range(3):
-    # #     # 发送指令
-    #     ser.write(b'\x01\xfd\x00\x32\x00\x00\x0F\x78\x6B')
-    #     time.sleep(2)  # 等待Arduino响应
-    # degree = [0,90,180,-90]
-
-
     if set_pos != pos:
         set_degress(ser, pos)
         time.sleep(2)  # 等待Arduino响应
         set_pos = pos
-    # ser.write(b'\x01\x36\x6B')#讀取角度值
-    # # ser.write(b'\x01\xf3\x01\x6B')#不始能狀態 #始能狀態 b'\x01\xf3\x01\x6B'
-    # time.sleep(1)  # 等待Arduino响应
-    # data = ser.readall()
-    # print(data[1:5])
-    # decode_degree =struct.unpack('>I',data[1:-1])[0]
-    # print(decode_degree)
-    # if decode_degree > 65536*10:
-    #     print(decode_degree-65536**2)
-    #     current_angel = ((decode_degree-65536**2) * 360) / 65536
-    #     print("當前角度負值 : ",current_angel//5)
-    # else:
-    #     current_angel = ((decode_degree * 360)) / 65536
-    #     print("角度 : ",current_angel//5)
     ser.readall()
-    ser.write(b'\x01\x33\x6B')  # 讀取脈衝值
-    time.sleep(1)  # 等待Arduino响应
+    ser.write(b'\x01\x32\x6B')  # 讀取脈衝
     data = ser.readall()
-    if struct.unpack('>I',data[1:-1])[0] > 65536:
-        print((struct.unpack('>I',data[1:-1])[0]-(65536**2)))
-        current_angel = struct.unpack('>I',data[1:-1])[0]-(65536**2)
-        print((struct.unpack('>I',data[1:-1])[0]-(65536**2))//44.4)
-    else:
-        print((struct.unpack('>I',data[1:-1])[0]))
-        print((struct.unpack('>I',data[1:-1])[0])//44.4)
-        current_angel = struct.unpack('>I',data[1:-1])[0]
+    current_angel = struct.unpack('>I', data[3:7])[0]
+    degree = current_angel // 44.4
 
-
-    degree = current_angel // 44.4 * -1
-    print("當前脈衝角度",degree)
-    # print((struct.unpack('>I',data[1:-1])[0]*360)/65536)
-
+    if data[2] == 1:
+        degree = degree
+        current_angel = current_angel * -1
+    print("歸零 : ", current_angel)
+    print("角度 : ", degree)
+    # degree = current_angel // 44.4 * -1
+    print("當前脈衝角度",current_angel)
     a,b = x,y   #圆点坐标
-
-    w = 10  # 圆平均分为10份
-    m = (2*math.pi)/w #一个圆分成10份，每一份弧度为 m
     r = 540  #半径
     point_list = ""
-    print("當前座標 : ",a,b)
-    print("角度換算值 : ",degree)
-    print("弧度換算值 : ",degree/360*(2*math.pi))
-    print("角度SIN值 : ",math.sin(degree))
-    print("角度COS值 : ",math.cos(degree))
-    print("弧度SIN值 : ",math.sin((degree/360)*(2*math.pi)))
-    print("弧度COS值 : ",math.cos((degree/360)*(2*math.pi)))
+    # print("當前座標 : ",a,b)
+    # print("角度換算值 : ",degree)
+    # print("弧度換算值 : ",degree/360*(2*math.pi))
+    # print("角度SIN值 : ",math.sin(degree))
+    # print("角度COS值 : ",math.cos(degree))
+    # print("弧度SIN值 : ",math.sin((degree/360)*(2*math.pi)))
+    # print("弧度COS值 : ",math.cos((degree/360)*(2*math.pi)))
     x = a + r * math.cos((degree / 360) * (2 * math.pi))
-    y = b + r * math.sin((degree/360)*(2*math.pi))
+    y = b + r * math.sin((degree/360)*(2*math.pi))*-1
     point_list += " X : {}, Y :{},Z : {}".format(round(x,2),round(y,2),z)
     print(point_list)
     # 关闭串口
-    ser.close()
+    # ser.close()
 def Axis_move(ser2,sx=0,sy=0,sz=0,sw=0):
     """
 
@@ -281,52 +258,26 @@ def GET_POS(ser2):
     previous_line = ""
     time.sleep(1)  # 等待Arduino响应
     ser2.write(b'GETPOS\n')  # 发送'hello'指令
-    # data = ser2.readall().decode().strip()
     time.sleep(0.2)  # 等待Arduino响应
     while True:
         # 從串口讀取一行數據
         current_line = ser2.readline().decode().strip()
 
         if current_line:
-            print(f"Current Line: {current_line}")
-
+            # print(f"Current Line: {current_line}")
             # 如果讀取到 "Done"，則回溯上一段字串
             if current_line == "DONE":
-                print(f"Previous Line before 'Done': {previous_line}")
+                # print(f"Previous Line before 'Done': {previous_line}")
                 break
             # 更新 previous_line 為當前讀取的數據
             previous_line = current_line
+
         else:
             break
     return previous_line
-    # if data != "":
-    #     print("GETPOS : ",data)
-    #     # ser2.close()
-    #     return data
-    # else:
-    #     # ser2.close()
-    #     return "no data"
+
 def Zero_Pos(ser2):
     global height_limit
-    port = 'COM16'  # 根据您的情况更改端口号，例如在Windows上可能是 'COM3'
-    baudrate = 38400  # 波特率需要与Arduino上的设置一致
-    ser = serial.Serial(port, baudrate, timeout=0.5)
-    time.sleep(1)
-    #查看高度是否正確
-    data = GET_POS(ser2)
-    if len(data) > 35:
-        print("測試 : ", data)
-    else:
-        x = int(data.split(',')[0].split(':')[1].split('.')[0])
-        y = int(data.split(',')[1].split(':')[1].split('.')[0])
-        z = int(data.split(',')[2].split(':')[1].split('.')[0])
-    if z > 275:
-        print("解除高度限制")
-        height_limit = 0
-    else:
-        print("設定高度限制失敗")
-        height_limit = 1
-
     try:
         set_degress(ser, 1)
     except:
@@ -443,14 +394,37 @@ def Setting_End_Effector(ser2,efx,efy,efz,efw=0):
     #     ser.close()
     #     ser2.close()
 
-# port = 'COM7'  # 根据您的情况更改端口号，例如在Windows上可能是 'COM3'
+# Zero_Pos(ser2)
+
+data = GET_POS(Arduino)
+print(data)
+x = float(data.split(',')[0].split(':')[1])
+y = float(data.split(',')[1].split(':')[1])
+z = float(data.split(',')[2].split(':')[1])
+print("X : ",x)
+print("Y : ",y)
+print("Z : ",z)
+
+if z > 270:
+    print("解除高度限制")
+    height_limit = 0
+height_limit = 0
+#歸零
+# set_degress(Emm42,0)
+# rotate(Emm42,x,y,z,pos=1)
+# GET_POS(Arduino)
+Axis_move(Arduino,100,200,260,0)
+"""
+# 移動到指定位置
+
+# port = 'COM13'  # 根据您的情况更改端口号，例如在Windows上可能是 'COM3'
 # baudrate = 115200  # 波特率需要与Arduino上的设置一致
 # ser2 = serial.Serial(port, baudrate, timeout=0.2)
-port = 'COM13'  # 根据您的情况更改端口号，例如在Windows上可能是 'COM3'
-baudrate = 115200  # 波特率需要与Arduino上的设置一致
-ser2 = serial.Serial(port, baudrate, timeout=0.2)
-height_limit = 0
-set_degress(ser2,3)
+# height_limit = 0
+# set_degress(ser2,1)
+
+"""
+
 
 
     # print(i[0])
