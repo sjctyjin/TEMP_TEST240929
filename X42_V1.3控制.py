@@ -401,19 +401,19 @@ print(data)
 x = float(data.split(',')[0].split(':')[1])
 y = float(data.split(',')[1].split(':')[1])
 z = float(data.split(',')[2].split(':')[1])
-print("X : ",x)
-print("Y : ",y)
-print("Z : ",z)
-
-if z > 270:
-    print("解除高度限制")
-    height_limit = 0
-height_limit = 0
+# print("X : ",x)
+# print("Y : ",y)
+# print("Z : ",z)
+#
+# if z > 270:
+#     print("解除高度限制")
+#     height_limit = 0
+# height_limit = 0
 #歸零
 # set_degress(Emm42,0)
 # rotate(Emm42,x,y,z,pos=1)
 # GET_POS(Arduino)
-Axis_move(Arduino,100,200,260,0)
+# Axis_move(Arduino,100,200,260,0)
 """
 # 移動到指定位置
 
